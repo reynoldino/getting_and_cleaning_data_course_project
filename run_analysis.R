@@ -1,65 +1,49 @@
-require(plyr)
+library(plyr)
 
-#Utils: function add suffix
-addSuffix<- function(x, suffix) {
-  if (!(x %in% c("Subject","Activity"))) {
-    paste(x,suffix, sep="")
-  }
-  else{
-    x
-  }
-}
 
-#Get data
+# Get data
 pathfile<-file.path(getwd(),"UCI HAR Dataset")
 
-pathfiletest<-file.path(pathfile, "test")
-pathfiletrain<-file.path(pathfile, "train")
-  
-xtest<-read.table(file.path(pathfiletest,"X_test.txt"))
-ytest<-read.table(file.path(pathfiletest,"Y_test.txt"))
-subjecttest<-read.table(file.path(pathfiletest,"subject_test.txt"))
+xtest<-read.table(paste0(pathfile, "/test/X_test.txt"))
+ytest<-read.table(paste0(pathfile,"/test/Y_test.txt"))
+subjecttest<-read.table(paste0(pathfile,"/test/subject_test.txt"))
 
-xtrain<-read.table(file.path(pathfiletrain,"X_train.txt"))
-ytrain<-read.table(file.path(pathfiletrain,"Y_train.txt"))
-subjecttrain<-read.table(file.path(pathfiletrain,"subject_train.txt"))
+xtrain<-read.table(paste0(pathfile,"/train/X_train.txt"))
+ytrain<-read.table(paste0(pathfile,"/train/Y_train.txt"))
+subjecttrain<-read.table(pste0(pathfile,"/train/subject_train.txt"))
 
-#Get activity labels 
-activitylabels<-read.table(file.path(pathfile,
-                              			"activity_labels.txt"),
-                            col.names = c("Id", "Activity")
-                            )
+# Get activity labels 
+activitylabels<-read.table( file.path(pathfile, "activity_labels.txt")
+                          , col.names = c("Id", "Activity")
+                          )
 
-#Get features labels
-featurelabels<-read.table(file.path(pathfile,
-                            		"features.txt"),
-                            colClasses = c("character")
-                           	)
+# Get features labels
+featurelabels<-read.table( file.path(pathfile, "features.txt")
+                         , colClasses = c("character")
+                         )
 
-#1.Merges the training and the test sets to create one data set.
-traindata<-cbind(cbind(xtrain, subjecttrain), ytrain)
-testdata<-cbind(cbind(xtest, subjecttest), ytest)
-sensordata<-rbind(traindata, testdata)
+#1.Merge the training and the test sets to create one data set.
+traindata <- cbind(cbind(xtrain, subjecttrain), ytrain)
+testdata <- cbind(cbind(xtest, subjecttest), ytest)
+sensordata <- rbind(traindata, testdata)
 
-sensorlabels<-rbind(rbind(featurelabels, c(562, "Subject")), c(563, "Id"))[,2]
-names(sensordata)<-sensorlabels
+sensorlabels <- rbind(rbind(featurelabels, c(562, "Subject")), c(563, "Id"))[,2]
+names(sensordata) <- sensorlabels
 
-#2. Extracts only the measurements on the mean and standard deviation for each measurement.
+#2. Extract only the measurements on the mean and standard deviation for each measurement.
 sensordatameanstd <- sensordata[,grepl("mean\\(\\)|std\\(\\)|Subject|Id", names(sensordata))]
 
-#3. Uses descriptive activity names to name the activities in the data set
+#3. Descriptive activity names to name the activities in the data set
 sensordatameanstd <- join(sensordatameanstd, activitylabels, by = "Id", match = "first")
 sensordatameanstd <- sensordatameanstd[,-1]
 
-#4. Appropriately labels the data set with descriptive names.
+#4. Appropriate labels the data set with descriptive names.
 names(sensordatameanstd) <- gsub("([()])","",names(sensordatameanstd))
-#norm names
 names(sensordatameanstd) <- make.names(names(sensordatameanstd))
 
-#5. From the data set in step 4, creates a second, independent tidy data set 
-# with the average of each variable for each activity and each subject 
+#5. Creates a tidy data set with the average of each variable for each activity and each subject 
 finaldata<-ddply(sensordatameanstd, c("Subject","Activity"), numcolwise(mean))
-#improve column names
+# Set column names
 finaldataheaders<-names(finaldata)
 finaldataheaders<-sapply(finaldataheaders, addSuffix, ".mean")
 names(finaldata)<-finaldataheaders
